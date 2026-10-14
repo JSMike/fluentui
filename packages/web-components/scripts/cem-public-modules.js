@@ -1,22 +1,35 @@
 import { posix } from 'node:path';
 
-/** Resolve source modules using the public component entry points in package.json. */
+import { readFileSync } from 'node:fs';
+
+const packageJson = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
+const exportedModules = Object.entries(packageJson.exports).flatMap(([entry, value]) => {
+  const target = typeof value === 'string' ? value : value.default;
+  if (!target?.startsWith('./dist/esm/')) {
+    return [];
+  }
+  const segments = target.split('*').map(segment => segment.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'));
+  const pattern =
+    segments[0] +
+    segments
+      .slice(1)
+      .map((segment, index) => `${index === 0 ? '(.+)' : '\\1'}${segment}`)
+      .join('');
+  return [{ entry, pattern: new RegExp(`^${pattern}$`) }];
+});
+
+/** Resolve source modules using the actual public export map, including analyzer URL paths. */
 export function publicModulePath(sourcePath) {
-  const path = sourcePath.replace(/^\.\//, '').replace(/^src\//, '');
-  const component = /^([^/]+)\/([^/]+)\.ts$/.exec(path);
-  if (!component) {
+  const normalized = sourcePath.replace(/^\.\//, '').replace(/^\/+/, '');
+  if (!normalized.startsWith('src/')) {
     return sourcePath;
   }
-
-  const [, folder, file] = component;
-  if (file === folder) {
-    return `./${folder}/class.js`;
-  }
-  if (file === `${folder}.base`) {
-    return `./${folder}/base.js`;
-  }
-  if (file === `${folder}.options`) {
-    return `./${folder}/options.js`;
+  const emitted = normalized.replace(/^src\//, './dist/esm/').replace(/\.ts$/, '.js');
+  for (const { entry, pattern } of exportedModules) {
+    const match = pattern.exec(emitted);
+    if (match) {
+      return entry.replaceAll('*', match[1]);
+    }
   }
   return sourcePath;
 }
@@ -82,13 +95,24 @@ export function publicModulesPlugin() {
       updateTypes(moduleDoc);
     },
     packageLinkPhase({ customElementsManifest }) {
-      const paths = new Map(customElementsManifest.modules.map(module => [module.path, publicModulePath(module.path)]));
+      const paths = new Map();
+      for (const module of customElementsManifest.modules) {
+        const target = publicModulePath(module.path);
+        const emittedSource = module.path.replace(/^\.\//, '').replace(/\.ts$/, '.js');
+        paths.set(module.path, target);
+        paths.set(emittedSource, target);
+        paths.set(`/${emittedSource}`, target);
+      }
       const updateReferences = value => {
         if (!value || typeof value !== 'object') {
           return;
         }
-        if (!value.package && typeof value.module === 'string') {
-          value.module = paths.get(value.module) ?? publicModulePath(value.module);
+        if (!value.package || value.package === packageJson.name) {
+          for (const key of ['module', 'modulePath']) {
+            if (typeof value[key] === 'string') {
+              value[key] = paths.get(value[key]) ?? publicModulePath(value[key]);
+            }
+          }
         }
         Object.values(value).forEach(updateReferences);
       };

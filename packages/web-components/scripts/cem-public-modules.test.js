@@ -51,6 +51,13 @@ test('component paths use the existing public exports and actual source folder',
     );
   }
   assert.equal(publicModulePath('src/patterns/start-end.ts'), 'src/patterns/start-end.ts');
+  assert.equal(publicModulePath('/src/button/button.base.js'), './button/base.js');
+  assert.equal(publicModulePath('/src/button/button.js'), './button/class.js');
+  assert.equal(publicModulePath('src/button/define-async.ts'), './button/define-async.js');
+  assert.equal(publicModulePath('src/button/button.definition-async.ts'), './button/definition-async.js');
+  assert.equal(publicModulePath('src/utils/orientation.ts'), './utils/orientation.js');
+  assert.equal(publicModulePath('src/theme/set-theme.ts'), './theme/set-theme.js');
+  assert.equal(publicModulePath('src/index.js'), '.');
 });
 
 test('only actual tagged elements get definitions and all local references follow the public paths', () => {
@@ -73,7 +80,8 @@ test('only actual tagged elements get definitions and all local references follo
             name: 'TextArea',
             customElement: true,
             tagName: 'fluent-textarea',
-            superclass: { name: 'BaseButton', module: 'src/button/button.base.ts' },
+            modulePath: 'src/textarea/textarea.ts',
+            superclass: { name: 'BaseButton', module: '/src/button/button.base.js' },
             members: [
               {
                 name: 'size',
@@ -101,6 +109,7 @@ test('only actual tagged elements get definitions and all local references follo
   assert.equal(manifest.modules[0].path, './button/base.js');
   assert.equal(manifest.modules[0].exports[0].declaration.module, './button/base.js');
   assert.equal(manifest.modules[1].declarations[0].superclass.module, './button/base.js');
+  assert.equal(manifest.modules[1].declarations[0].modulePath, './textarea/class.js');
   assert.equal(manifest.modules[1].declarations[0].members[0].type.references[0].module, './textarea/options.js');
   assert.equal(manifest.modules[2].declarations[0].superclass.module, 'src/button/button.ts');
   assert.deepEqual(manifest.modules[3], {
