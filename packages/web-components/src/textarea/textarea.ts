@@ -5,7 +5,7 @@ import { TextAreaAppearance, TextAreaSize } from './textarea.options.js';
 /**
  * The Fluent TextArea Element.
  *
- * @tag fluent-text-area
+ * @tag fluent-textarea
  *
  */
 export class TextArea extends BaseTextArea {

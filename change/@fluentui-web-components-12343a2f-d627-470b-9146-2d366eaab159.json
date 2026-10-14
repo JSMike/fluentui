@@ -1,0 +1,7 @@
+{
+  "type": "patch",
+  "comment": "Fix custom element manifest module paths, registered tags, and public option type references.",
+  "packageName": "@fluentui/web-components",
+  "email": "michael.cebrian@gmail.com",
+  "dependentChangeType": "patch"
+}

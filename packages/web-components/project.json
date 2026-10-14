@@ -5,6 +5,13 @@
   "implicitDependencies": [],
   "tags": ["platform:web", "web-components"],
   "targets": {
+    "test-cem": {
+      "executor": "nx:run-commands",
+      "options": {
+        "command": "node --test scripts/cem-public-modules.test.js",
+        "cwd": "packages/web-components"
+      }
+    },
     "e2e": {
       "dependsOn": ["build"]
     }
